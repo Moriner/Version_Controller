@@ -1,0 +1,1042 @@
+#!/usr/xpg4/bin/sh
+
+PRINTF=/usr/bin/printf
+FIND=/usr/bin/find
+SED=/usr/bin/sed
+GREP=/usr/bin/grep
+MV=/usr/bin/mv
+MKDIR=/usr/bin/mkdir
+RMDIR=/usr/bin/rmdir
+ECHO=/usr/bin/echo
+DIFF=/usr/bin/diff
+CAT=/usr/bin/cat
+RM=/usr/bin/rm
+CP=/usr/bin/cp
+PATCH=/usr/bin/patch
+WC=/usr/bin/wc
+TOUCH=/usr/bin/touch
+AWK=/usr/bin/awk
+
+count=$#
+rflag=
+vflag=
+flag1=
+flag=
+addflag=
+getflag=
+deleteflag=
+updateflag=
+moveflag=
+showflag=
+helpflag=
+choiceflag1=
+choiceflag2=
+result=
+resultflag=
+optflag=
+directoryflag1=
+
+#-------------------------COMMENT FOR BEGIN--------------------------#
+#    In this part, I use a value "count" to count the number of input#
+#  string. In my coding, command and <file(s)> are indispensable and #
+#  flag is optional. And command should be in the place of $1 while  #
+#  <file(s)> need to be put in the end. In other cases, it will offer#
+#  users a "USAGE" about the right form.                             #
+#-------------------------COMMENT FOR BEGIN--------------------------#
+
+if [ "$count" -ge 1 ]; then
+      case "$1" in
+          'add')    addflag=1;;
+          'get')    getflag=1;;
+          'delete') deleteflag=1;;
+          'update') updateflag=1;;
+          'move')   moveflag=1;;
+          'show')   showflag=1;;
+          'help')   helpflag=1;;
+	  'opt')    optflag=1;;
+          *)        $PRINTF "Usage: %s:[ command ] [ -r ] [ -v ] \
+[ file(s) ] args\n" $0
+		    exit 2;;
+      esac
+      shift
+      case "$1" in
+	  '-r') rflag=1
+		flag1=1;;
+	  '-v') vflag=1
+		flag1=1;;
+      esac
+      if [ ! -z "$flag1" ]; then
+        shift
+	  case "$1" in
+            '-r') rflag=1 
+                  flag=1;;
+            '-v') vflag=1 
+                  flag=1;;
+          esac
+      fi
+      if [ -z "$flag1" ]; then
+	case "$2" in
+	  '-r') $PRINTF "Usage: %s:[ command ] [ -r ] [ -v ] \
+[ file(s) ] args\n" $0
+                exit 2;;
+          '-v') $PRINTF "Usage: %s:[ command ] [ -r ] [ -v ] \
+[ file(s) ] args\n" $0
+                exit 2;;
+	esac
+      fi
+
+#-------------------------COMMENT FOR ADD-------------------------------#
+#    In "add" command, it supports add a file or a directory into the   #
+#  repository. When it is about a file "example", the coding will       #
+#  create a file named .uevcs in the current directory.In this directory#
+#  there will be a directory named "example" and a file named "log". In #
+#  the "example" directory it stores the original file of example while #
+#  in the log file some info$RMation is recorded.When users finish that,#
+#  "example" is no longer in the current directory. When it is about a  #
+#  directory "exampleDIR", the coding will search for all files in that #
+#  directory.Once found,the coding creates a file named .uevcs in the   #
+#  same place of that file being found. For example, if there is a file #
+#  exampleDIR/example, it creates exampleDIR/.uevcs for all files in the#
+#  same level of directory tree. In that .uevcs, the coding will create #
+#  everything I mentioned about "adding a file".                        #
+#-------------------------COMMENT FOR ADD-------------------------------#    
+
+add(){
+	for name in $*
+          do
+	     if [ ! -f "$name" ]; then
+	       $PRINTF "There is no file $name.\
+If $name is a directory, please use \"-r\" to deal with it.\n"
+	     else
+             for file in `$FIND $name 2> /dev/null`
+               do
+		   if [ -d "$file" ]; then
+		     $PRINTF "You should use the flag \"-r\" to deal \
+with the directory $file.\n"
+		   fi
+		   if [ ! -d "$file" ]; then
+		     filepath=`$ECHO $file | $SED -e 's/\/[^\/]*$//'`
+		     filename=`$ECHO $file | $SED -e 's/.*\///'`
+		     if [ "$filename" = "$file" ]; then
+		       if [ -f .uevcs/"$file"/"$file" ]; then
+                         $PRINTF "You should use the command \"update\" \
+to update the version of $file\n"
+                       else
+                       if [ ! -d .uevcs/"$file" ]; then
+                         $MKDIR -p .uevcs/$file
+                         $ECHO "**NUMBER.1**">.uevcs/$file/log
+                         $ECHO `date`>>.uevcs/$file/log
+                         $ECHO "Created by $USER">>.uevcs/$file/log
+                         $ECHO "version:1">>.uevcs/$file/log
+                         $ECHO "\n">>.uevcs/$file/log
+                         $CP $file .uevcs/$file/$file
+                         if [ ! -z "$vflag" ]; then
+                           $PRINTF "create directory .uevcs/$file---ok!\n"
+                           $PRINTF "create file .uevcs/$file/log---ok!\n"
+                           $PRINTF "create file .uevcs/$file/$file---ok!\n"
+                         fi
+                       fi
+		       fi
+		     else
+                       if [ -f "$filepath"/.uevcs/"$filename"\
+/"$filename" ]; then
+                         $PRINTF "You should use the command \"update\" \
+to update the version of $file\n"
+                       else
+                       if [ ! -d "$filepath"/.uevcs/"$filename" ]; then
+                         $MKDIR -p $filepath/.uevcs/$filename
+                         $ECHO "**NUMBER.1**">\
+$filepath/.uevcs/$filename/log
+                         $ECHO `date`>>$filepath/.uevcs/$filename/log
+                         $ECHO "Created by $USER">>\
+$filepath/.uevcs/$filename/log
+                         $ECHO "version:1">>\
+$filepath/.uevcs/$filename/log
+                         $ECHO "\n">>$filepath/.uevcs/$filename/log
+                         $CP $file $filepath/.uevcs/$filename/$filename
+                         if [ ! -z "$vflag" ]; then
+                           $PRINTF \
+"create directory $filepath/.uevcs/$filename---ok!\n"
+                           $PRINTF \
+"create file $filepath/.uevcs/$filename/log---ok!\n"
+                           $PRINTF \
+"create file $filepath/.uevcs/$filename/$filename---ok!\n"
+                         fi
+		       fi
+		       fi
+		     fi
+		  fi
+               done
+	     fi
+          done
+}
+addr(){
+  for name in $*
+    do
+      if [ ! -d "$name" ]; then
+	$PRINTF "There is no directory $name.\n"
+	$PRINTF "If $name is a file, you should NOT use the \
+flag \"-r\" to deal with the file $name\n"
+      else
+      for file in `$FIND $name -type f 2> /dev/null | grep -v ".uevcs"`
+	do
+	  filepath=`$ECHO $file | $SED -e 's/\/[^\/]*$//'`
+	  filename=`$ECHO $file | $SED -e 's/.*\///'`
+	  if [ "$filepath" != "$file" ]; then
+	    if [ -f "$filepath"/.uevcs/"$filename"/"$filename" ]; then
+	      $PRINTF "You should use the command \"update\" \
+to update the version of $file\n"
+	    fi
+	    if [ ! -d "$filepath"/.uevcs/"$filename" ]; then
+              $MKDIR -p $filepath/.uevcs/$filename
+	      $ECHO "**NUMBER.1**">$filepath/.uevcs/$filename/log
+	      $ECHO `date`>>$filepath/.uevcs/$filename/log
+              $ECHO "Created by $USER">>$filepath/.uevcs/$filename/log
+              $ECHO "version:1">>$filepath/.uevcs/$filename/log
+	      $ECHO "\n">>$filepath/.uevcs/$filename/log
+	      $CP $file $filepath/.uevcs/$filename/$filename
+	      if [ ! -z "$vflag" ]; then
+		$PRINTF "create directory $filepath/.uevcs/$filename\
+---ok!\n"
+		$PRINTF "create file $filepath/.uevcs/$filename/log\
+---ok!\n"
+		$PRINTF "create file $filepath/.uevcs/$filename\
+/$filename---ok!\n"
+	      fi
+	    fi
+	  fi
+	  if [ "$filepath" = "$file" ]; then
+	    if [ -d .uevcs/"$filename" ]; then
+              $PRINTF "You should use the command \"update\" to \
+update the version of $file\n"
+	    fi
+	    if [ ! -d .uevcs/"$filename" ]; then
+	      $MKDIR -p .uevcs/$filename
+              $ECHO "**NUMBER.1**">.uevcs/$filename/log
+	      $ECHO `date`>>.uevcs/$filename/log
+              $ECHO "Created by $USER">>.uevcs/$filename/log
+              $ECHO "version:1">>.uevcs/$filename/log
+	      $ECHO "\n">>.uevcs/$filename/log
+              $CP $file .uevcs/$filename/$filename
+              if [ ! -z "$vflag" ]; then
+                $PRINTF "create directory .uevcs/$filename---ok!\n"
+                $PRINTF "create file .uevcs/$filename/log---ok!\n"
+                $PRINTF "create file .uevcs/$filename/$filename---ok!\n"
+              fi
+	    fi
+          fi
+        done
+      fi
+    done
+}
+
+#--------------------------COMMENT FOR UPDATE--------------------------#
+#    compare the file of version1 and store the differences. In my     #
+#  opinion, if two people have modified the file and they did the same #
+#  modifications, the coding will store both of their version. In that #
+#  case, when the new version is different from the original one, it   #
+#  should be stored into the repository even it is the same as the     #
+#  previous one. Therefore,the coding will never miss the modifications# 
+#  of everyone."-r" only supports directory and if users type something# 
+#  wrong, the coding will offer them "Usage". For example, if version2 #
+#  and version4 are the same and they belong to two people, the system #
+#  should store both of them to store information.                     #  
+#--------------------------COMMENT FOR UPDATE--------------------------#
+
+update(){
+    for name in $*
+       do
+	 if [ ! -f "$name" ]; then
+  	   $PRINTF "There is no file $name.\
+If $name is a directory, please use \"-r\" to deal with it.\n"
+	 else
+         for file in `$FIND $name 2> /dev/null`
+           do
+	     n=`$ECHO $file | $SED -e 's/\/[^\/]*$//'`
+	     nn=`$ECHO $file | $SED -e 's/.*\///'`
+	     if [ "$n" = "$file" ]; then
+              if [ -d .uevcs/"$file" ]; then
+                index=`grep -o "**NUMBER." .uevcs/$file/log | $WC -l`
+                number=`expr $index + 1`
+                value=`$DIFF .uevcs/$file/$file $file`
+                if [ -z "$value" ]; then
+                  $PRINTF "Your file $file is same as the \
+original version.\n"
+                fi
+                if [ ! -z "$value" ]; then
+                  $ECHO "**NUMBER.$number**">>.uevcs/$file/log
+                  $ECHO `date`>>.uevcs/$file/log
+                  $ECHO "changed by $USER">>.uevcs/$file/log
+                  $ECHO "version:$number">>.uevcs/$file/log
+                  $DIFF .uevcs/$file/$file $file>versionchenchao
+                  $CAT versionchenchao>>.uevcs/$file/log
+                  $ECHO "\n">>.uevcs/$file/log
+                  $RM -rf versionchenchao
+                  if [ ! -z "$vflag" ]; then
+                    $PRINTF "version update---ok!\n"
+                    $PRINTF "store differences into .uevcs/$file/log\
+---ok!\n"
+                  fi
+                fi
+              else
+                $PRINTF "You should use the command \"add\" to add \
+a new file to repository\n"
+              fi
+	     else
+             if [ -d "$n"/.uevcs/"$nn" ]; then
+                index=`grep -o "**NUMBER." $n/.uevcs/$nn/log | $WC -l`
+                number=`expr $index + 1`
+                value=`$DIFF $n/.uevcs/$nn/$nn $file`
+                if [ -z "$value" ]; then
+                  $PRINTF "Your file $file is same as the \
+original version.\n"
+                fi
+                if [ ! -z "$value" ]; then
+                  $ECHO "**NUMBER.$number**">>$n/.uevcs/$nn/log
+                  $ECHO `date`>>$n/.uevcs/$nn/log
+                  $ECHO "changed by $USER">>$n/.uevcs/$nn/log
+                  $ECHO "version:$number">>$n/.uevcs/$nn/log
+                  $DIFF $n/.uevcs/$nn/$nn $file>versionchenchao
+                  $CAT versionchenchao>>$n/.uevcs/$nn/log
+                  $ECHO "\n">>$n/.uevcs/$nn/log
+                  $RM -rf versionchenchao
+                  if [ ! -z "$vflag" ]; then
+                    $PRINTF "version update---ok!\n"
+                    $PRINTF "store differences into $n/.uevcs/$nn/log\
+---ok!\n"
+                  fi
+                fi
+              else
+                $PRINTF "You should use the command \"add\" to add \
+a new file to repository\n"
+              fi
+	     fi
+	   done
+	 fi
+       done
+}
+updater(){
+    for name in $*
+	do
+	  if [ ! -d "$name" ]; then
+            $PRINTF "There is no directory $name\n"
+	    $PRINTF "If $name is a file, you should NOT use the \
+flag \"-r\" to update the file $file\n"
+          else
+	  for file in `$FIND $name -type f 2> /dev/null | grep -v ".uevcs"`
+	    do
+              filepath=`$ECHO $file | $SED -e 's/\/[^\/]*$//'`
+              filename=`$ECHO $file | $SED -e 's/.*\///'`
+	      if [ "$filepath" = "$filename" ]; then
+		if [ ! -d .uevcs/"$filename" ]; then
+		  $PRINTF "You should use command \"add\" to add \
+$file to repository\n"
+		else
+                index=`grep -o "**NUMBER." .uevcs/$filename/log | $WC -l`
+                number=`expr $index + 1`
+		value=`$DIFF .uevcs/$file/$file $file`
+		  if [ -z "$value" ]; then
+		    $PRINTF "Your file $file is same as the original\
+ version.\n"
+		  fi
+		  if [ ! -z "$value" ]; then
+		    $ECHO "**NUMBER.$number**">>.uevcs/$file/log
+		    $ECHO `date`>>.uevcs/$file/log
+		    $ECHO "changed by $USER">>.uevcs/$file/log
+		    $ECHO "version:$number">>.uevcs/$file/log
+		    $DIFF .uevcs/$file/$file $file>versionchenchao
+		    $CAT versionchenchao>>.uevcs/$file/log
+		    $ECHO "\n">>.uevcs/$file/log
+		    $RM -rf versionchenchao
+		    if [ ! -z "$vflag" ]; then
+			$PRINTF "version update---ok!\n"
+			$PRINTF "store differences into .uevcs/$file/log\
+---ok!\n"
+		    fi
+		  fi	
+		fi
+	      fi
+	      if [ "$filepath" != "$filename" ]; then
+		if  [ ! -d "$filepath"/.uevcs/"$filename" ]; then
+		  $PRINTF "You should use command \"add\" to add $file \
+to repository\n"
+		else
+		index=`grep -o "**NUMBER." $filepath/.uevcs/$filename\
+/log | $WC -l`
+                number=`expr $index + 1`
+		value=`$DIFF $filepath/.uevcs/$filename/$filename $file`
+		  if [ -z "$value" ]; then
+		    $PRINTF "Your file $filename is same as the \
+original file\n"
+		  fi
+		  if [ ! -z "$value" ]; then
+		    $ECHO "**NUMBER.$number**">>$filepath/.uevcs/\
+$filename/log
+		    $ECHO `date`>>$filepath/.uevcs/$filename/log
+		    $ECHO "changed by $USER">>$filepath/.uevcs/\
+$filename/log
+		    $ECHO "version:$number">>$filepath/.uevcs/\
+$filename/log
+		    $DIFF $filepath/.uevcs/$filename/$filename \
+$file>versionchenchao
+		    $CAT versionchenchao>>$filepath/.uevcs/$filename\
+/log
+		    $ECHO "\n">>$filepath/.uevcs/$filename/log
+		    $RM -rf versionchenchao
+		    if [ ! -z "$vflag" ]; then
+			$PRINTF "version update---ok!\n"
+			$PRINTF "store differences into $filepath/\
+.uevcs/$filename/log---ok!\n"
+		    fi
+		  fi
+		fi
+	      fi	        
+	    done
+	  fi
+	done
+}
+
+#---------------------COMMENT FOR JUDGE------------------------#
+#    It is used to judge whether there is a file which owns the#
+#  same name with the file users want to deal with. You can    #
+#  either overwrite the file existing in the target directory  #
+#  or rename your file.                                        #
+#---------------------COMMENT FOR JUDGE------------------------#  
+
+judgeexist(){
+      $PRINTF "File $oriname exists, overwrite it? Y/N\n" 
+      $PRINTF "(If you press ENTER only, Y is default)\n"
+      read result
+      case $result in
+           Y) resultflag=1;;
+      esac
+      if [ ! -z "$result" ]; then
+      while [ "$result" != "Y" ] && [ "$result" != "N" ]
+         do
+           $PRINTF "Input again: Y/N\n"
+           read result
+           case $result in
+                N) resultflag=1;;
+           esac
+         done
+      fi
+      if [ ! -z "$resultflag" ]; then
+        $PRINTF "Input the file name for $filename:"
+        read thefilename
+	if [ -z "$directoryflag1" ]; then
+          $CP .uevcs/$oriname/$oriname $thefilename 
+	else
+	  $CP $directory/$oriname $thefilename
+	fi    
+      fi
+      if [ -z "$resultflag" ]; then
+	if [ -z "$directoryflag1" ]; then
+          $CP .uevcs/$oriname/$oriname $oriname
+	else
+          $CP $directory/$oriname $oriname
+	fi
+      fi
+}
+judgeexistr(){
+    nn=`$ECHO $name | $SED -e 's/\/[^\/]*$//'`
+    nnn=$nn/
+    if [ "$nnn" = "$name" ]; then
+	nn=`$ECHO $nn | $SED -e 's/\/[^\/]*$//'`
+    fi
+    directoryCreate=`$FIND $name -type d | grep ".uevcs"`
+    if [ ! -z "$directoryCreate" ]; then
+      dir=`$ECHO $directoryCreate | $SED -e 's/\/\.uevcs.*//'`
+      for d in $dir
+	do
+	  path=`$ECHO $d | $SED -e s,"$nn"\/,,`
+	  if [ ! -d "$path" ]; then
+	    $MKDIR -p $path
+	  fi
+	  if [ -f "$path"/"$filename" ]; then
+            $PRINTF "File $path/$filename exists, overwrite it? Y/N\n"
+            $PRINTF "(If you press ENTER only, Y is default)\n"
+            read result
+            case $result in
+                Y) resultflag=1;;
+            esac
+            if [ ! -z "$result" ]; then
+            while [ "$result" != "Y" ] && [ "$result" != "N" ]
+              do
+                $PRINTF "Input again: Y/N\n"
+                read result
+                case $result in
+                    N) resultflag=1;;
+                esac
+              done
+            fi
+            if [ ! -z "$resultflag" ]; then
+              $PRINTF "Input your file name for $path/$filename:\n"
+              read newfilename
+              $CP $file $path/$newfilename
+            fi      
+            if [ -z "$resultflag" ]; then
+              $CP $file $path/$filename
+            fi
+	  fi
+	  if [ ! -f "$path"/"$filename" ]; then
+	     $CP $file $path/$filename
+	  fi
+	done	
+    fi
+}
+
+#--------------------------COMMENT FOR GET----------------------------#
+#   If the file exists, users can get the file of the version "num".  #
+# "num" is chosen by users. Users can also get the whole directory of #
+# the newest version. "-r" only supports directory and if users type  #
+# something wrong, the coding will offer them "Usage".                #
+#--------------------------COMMENT FOR GET----------------------------#
+
+get(){
+  for name in $*
+    do
+      directoryflag1=
+      fi=`$ECHO $name | $SED -e 's/\/[^\/]*$//'`
+      n=`$ECHO $name | $SED -e 's/.*\///'`
+      if [ "$n" = "$name" ]; then
+        dir=`$FIND .uevcs/$name -type d 2> /dev/null`
+      else
+	dir=`$FIND $fi/.uevcs/$n -type d 2> /dev/null`
+        directoryflag1=1
+      fi
+      if [ ! -d "$dir" ]; then
+            $PRINTF "There is no $name in the repository.\n" 
+	    $PRINTF "If $name is a directory, please use the \
+flag \"-r\" to get data.\n"
+      else 
+      for directory in $dir
+	do
+	    oriname=`$ECHO $directory | $SED -e 's/.*\.uevcs\///'`
+ 	    $PRINTF "Please input the version you want to get for \
+$oriname:\n"
+	    read version
+	    versionvalue=`grep -o "version:$version" $directory/log`
+            while [ -z "$versionvalue" ]
+	      do
+	        $PRINTF "The directory $directory has no version of \
+$version. Please input again:\n"
+	        read version
+		versionvalue=`grep -o "version:$version" $directory/log`
+	      done
+	    if [ "$version" -gt 1 ]; then
+	      $SED -n -e '/^version:'"$version"'/,/^$/p' \
+$directory/log | more | $SED -e '1d' | $SED -e '$d'>newversionchenchao
+	      $PATCH $directory/$oriname < newversionchenchao
+	      if [ -f "$oriname" ]; then
+	        for filename in `$FIND $name 2> /dev/null`
+		  do
+		    judgeexist $oriname $filename $directory \
+$directoryflag1
+		  done
+                $PATCH -R $directory/$oriname < newversionchenchao
+	        $RM -rf newversionchenchao
+	      fi
+	      if [ ! -f "$oriname" ]; then
+	        $CP $directory/$oriname $oriname
+                $PATCH -R $directory/$oriname < newversionchenchao
+                $RM -rf newversionchenchao
+	      fi
+	      if [ ! -z "$vflag" ]; then
+		$PRINTF "get the differences---ok!\n"
+		$PRINTF "recover file---ok!\n"
+		$PRINTF "recover the original version---ok!\n"
+	      fi
+            else
+	      if [ -f "$oriname" ]; then
+                for filename in `$FIND $name 2> /dev/null`
+                  do
+                    judgeexist $oriname $filename $directory \
+$directoryflag1
+                  done
+	      fi
+	      if [ ! -f "$oriname" ]; then
+	        $CP $directory/$oriname $oriname
+	      fi
+              if [ ! -z "$vflag" ]; then
+                $PRINTF "get the original version---ok!\n"
+              fi
+	    fi
+        done
+    fi
+  done
+}
+getr(){
+  for name in $*
+    do
+      for file in `$FIND $name -type f 2> /dev/null | grep -v "log"\
+ | grep ".uevcs"`
+	do
+	  if [ ! -f "$file" ]; then
+	    $PRINTF "There is no $name in the repository.\n"
+	    $PRINTF "If $name is a file, please DONOT use the \
+flag \"-r\" to get data.\n"
+	  else
+	    filename=`$ECHO $file | $SED -e 's/.*\///'`
+	    filepath=`$ECHO $file | $SED -e 's/\/\.uevcs.*//'`
+	    path=`$ECHO $file | $SED -e 's/\/\.uevcs.*/\/.uevcs/'`
+	    version=`grep "version:" $path/$filename/log | $SED -e '$!d'`
+	    if [ "$version" != "version:1" ] && [ ! -z "$version" ]; then
+              $SED -n -e '/^'"$version"'/,/^$/p' $path/$filename/log \
+| more | $SED -e '1d' | $SED -e '$d'>newversionchenchao	      
+	      $PATCH $file < newversionchenchao
+              judgeexistr $file $filapath $filename $name
+	      $PATCH -R $file < newversionchenchao
+	      $RM -rf newversionchenchao
+              if [ ! -z "$vflag" ]; then
+                $PRINTF "get the differences---ok!\n"
+                $PRINTF "recover file---ok!\n"
+                $PRINTF "recover the original version---ok!\n"
+              fi
+	    fi
+	    if [ "$version" = "version:1" ]; then
+		judgeexistr $file $filepath $filename $name
+              if [ ! -z "$vflag" ]; then
+                $PRINTF "get the original version---ok!\n"
+              fi
+            fi
+	  fi
+	done
+    done
+}
+delete(){
+  for name in $*
+    do
+      fi=`$ECHO $name | $SED -e 's/\/[^\/]*$//'`
+      n=`$ECHO $name | $SED -e 's/.*\///'`
+      if [ "$n" = "$name" ]; then
+        dir=`$FIND .uevcs -name $name -type d 2> /dev/null`
+      else
+	dir=`$FIND $fi/.uevcs -name $n -type d 2> /dev/null`
+      fi
+      if [ ! -d "$dir" ]; then
+        $PRINTF "There is no $name in the repository.\n"
+	$PRINTF "If $name is a directory, please use the flag \"-r\" \
+to delete data.\n"
+      else
+      for directory in $dir
+        do
+            $PRINTF "Please input the version you want to delete:\n"
+            read version
+            versionvalue=`grep -o "version:$version" $directory/log`
+            while [ -z "$versionvalue" ]
+              do
+                $PRINTF "The directory $directory has no version of \
+$version. Please input again:\n"
+                read version
+                versionvalue=`grep -o "version:$version" $directory/log`
+              done
+	    $SED -e '/^version:'"$version"'/,/^$/d' $directory/log>newlog
+	    $RM -rf $directory/log
+	    $MV newlog $directory/log
+	    if [ ! -z "$vflag" ]; then
+		input=`$ECHO $directory | $SED -e 's/.*\///'`
+		$PRINTF "file $input\n"
+		$PRINTF "get the version---ok!\n"
+		$PRINTF "gerp the version from log---ok!\n"
+		$PRINTF "delete the part of the version---ok!\n"
+		$PRINTF "\n"
+	    fi
+        done
+      fi
+    done
+}
+deleter(){
+  for name in $*
+    do
+      for file in `$FIND $name -type f 2> /dev/null | \
+grep -v "log" | grep ".uevcs"`
+        do
+          if [ ! -f "$file" ]; then
+            $PRINTF "There is no $name in the repository.\n" 
+	    $PRINTF "If $name is a file, please DONOT use the \
+flag \"-r\" to delete data.\n"
+          else
+            filename=`$ECHO $file | $SED -e 's/.*\///'`
+            path=`$ECHO $file | $SED -e 's/\/\.uevcs.*/\/.uevcs/'`
+            version=`grep "version:" $path/$filename/log | $SED -e '$!d'`
+            if [ ! -z "$version" ]; then
+              $SED -e '/^'"$version"'/,/^$/d' $path/$filename/log>newlog
+              $RM -rf $path/$filename/log
+	      $MV newlog $path/$filename/log
+              if [ ! -z "$vflag" ]; then
+                $PRINTF "file $filename\n"
+                $PRINTF "get the version---ok!\n"
+                $PRINTF "gerp the version from log---ok!\n"
+                $PRINTF "delete the part of the version---ok!\n"
+                $PRINTF "\n"
+              fi
+	    else 
+	      $PRINTF "The file $file has no version.\n"
+	    fi
+          fi
+        done
+    done
+}
+
+#-------------------------COMMENT FOR MOVE-----------------------------#
+#    My "move" is a little different from "mv". Except for "-r" and    #
+#  "-v", each string followed command "move" will be regarded as a file#
+#  name and the coding will search each of them in the repository.     #
+#  Therefore, in my design, the command "move" only supports files.    #
+#  Because the repository is relatively fixed and move the whole       #
+#  directory in repository is unacceptable. After users type the whole #
+#  command line, the coding will remind users to input the destination.# 
+#  If there is a file or directory named the same, it will show the    #
+#  choices of "overwrite" of "rename".                                 #  
+#-------------------------COMMENT FOR MOVE-----------------------------#
+
+move(){
+  for name in $*
+    do
+      fi=`$ECHO $name | $SED -e 's/\/[^\/]*$//'`
+      n=`$ECHO $name | $SED -e 's/.*\///'`
+      if [ "$n" = "$name" ]; then
+        dir=`$FIND .uevcs -name $name -type d 2> /dev/null`
+      else
+	dir=`$FIND $fi/.uevcs -name $n -type d 2> /dev/null`
+      fi
+      if [ ! -d "$dir" ]; then
+        $PRINTF "There is no $name in the repository.\n"
+	$PRINTF "If $name is a directory, please check and input name \
+of the file in this directory.\n"
+      else
+      for directory in $dir
+        do
+	for file in $n
+	  do 
+            $PRINTF "Please input the directory(directory path) you\
+ want to move to:(for file $file)\n"
+            read directorypath
+	    if [ ! -z "$directorypath" ]; then
+	    while [ ! -d "$directorypath" ]
+	      do
+		$PRINTF "There is no directory $directorypath. Please \
+check and INPUT AGAIN:\n"
+		read directorypath
+	      done
+              targetfile=`$FIND $directorypath -name $file 2> /dev/null`
+              targetlog=`$FIND $directorypath -name log 2> /dev/null`
+              if [ -z "$targetfile" ]; then
+		new1=
+		while [ -z "$new1" ]
+		  do
+		    $PRINTF "Input new name of your file $file:\n"
+                    read new1
+		  done 
+                $MKDIR -p $directorypath/$new1
+		if [ "$n" = "$name" ]; then
+		  $MV .uevcs/$file/$file $directorypath/$new1/$new1
+		  $MV .uevcs/$file/log $directorypath/$new1/log
+                  $RMDIR .uevcs/$file
+		else
+		  $MV $fi/.uevcs/$file/$file $directorypath/$new1/$new1
+                  $MV $fi/.uevcs/$file/log $directorypath/$new1/log
+                  $RMDIR $fi/.uevcs/$file
+		fi
+		if [ ! -z "$vflag" ]; then
+		  $PRINTF "move .uevcs/$file to $directorypath/$new1\
+---ok!\n"
+		  $PRINTF "move .uevcs/$log to $directorypath/$new1\
+---ok!\n"
+		  $PRINTF "delete the empty directory .uevcs/$file\
+---ok!\n"
+		fi
+              else
+		new1=
+		while [ -z "$new1" ]
+		  do 
+		    $PRINTF "You already have a file $file in \
+$directorypath.Please rename your file:\n"
+		    $PRINTF "(If you don't change your file name, \
+it will replace the original one.)\n"
+		    read new1
+		  done
+		if [ "$new1" = "$file" ]; then
+		  $RM -rf $directorypath/$file
+		fi
+		$MKDIR -p $directorypath/$new1
+		if [ "$n" = "$name" ]; then
+		  $MV .uevcs/$file/$file $directorypath/$new1/$new1
+		  $MV .uevcs/$file/log $directorypath/$new1/log
+                  $RMDIR .uevcs/$file
+		else
+		  $MV $fi/.uevcs/$file/$file  $directorypath/$new1/$new1
+                  $MV $fi/.uevcs/$file/log  $directorypath/$new1/log
+		  $RMDIR $fi/.uevcs/$file
+		fi
+                if [ ! -z "$vflag" ]; then
+                  $PRINTF "move .uevcs/$file to $directorypath/$new1\
+---ok!\n"
+                  $PRINTF "move .uevcs/$log to $directorypath/$new1\
+---ok!\n"
+                  $PRINTF "delete the empty directory .uevcs/$file\
+---ok!\n"
+                fi
+	      fi
+	    fi
+	  done
+	done
+      fi
+    done
+}
+show(){
+  for name in $*
+    do 
+      fi=`$ECHO $name | $SED -e 's/\/[^\/]*$//'`
+      n=`$ECHO $name | $SED -e 's/.*\///'`
+      if [ "$n" = "$name" ]; then
+        dir=`$FIND .uevcs -name $name -type d 2> /dev/null`
+      else
+        dir=`$FIND $fi/.uevcs -name $n -type d 2> /dev/null`
+      fi
+      if [ ! -z "$dir" ]; then
+        for directory in $dir
+	  do
+	    filename=`$ECHO $directory | $SED -e 's/.*\///'`
+	    $PRINTF "\n"
+	    $PRINTF "History of $filename:\n"
+	    $PRINTF "\n"
+	    $CAT $directory/log
+	    $PRINTF "\n"
+	    if [ ! -z "$vflag" ]; then
+		$PRINTF "\n"
+		$PRINTF "cat $directory/log---ok!\n"
+	    fi
+	  done
+      else
+	$PRINTF "There is no file $name in repository.\n"
+      fi
+    done
+}
+help(){
+  $PRINTF "      Version Controller     \n"
+  $PRINTF "            UEVCS            \n"
+  $PRINTF "          help page          \n"
+  $PRINTF "./uevcs [command] [flag] <file(s)>\n"
+  $PRINTF "where [command] is\n"
+  $PRINTF "  add	- add new files to the repository.\n"
+  $PRINTF "  get	- get files from the repository.\n"
+  $PRINTF "  delete - delete files from the repository.\n"
+  $PRINTF "  update - update current files to the repository.\n"
+  $PRINTF "  move	- move or rename a file to another \
+directory.\n"
+  $PRINTF "  show	- show the change history for file.\n"
+  $PRINTF "  help - show a help screen.\n"
+  $PRINTF "  opt  - delete the same version in the repository.\n"
+  $PRINTF "where [flag] is\n"
+  $PRINTF "  -v         - verbose\n"
+  $PRINTF "  -r         - recursive\n"
+}
+
+#-------------COMMENT FOR OPTIMIZATION (EXTENSION PART)----------------#
+#    This is the part of my extension. In my command for updating, I   #
+#  compare the original file with the new one. Although it avoids      # 
+#  losting one's modification which is the same as the previous, there #
+#  will be many extra files in the repository. In this command, the    #
+#  repository will be optimizated by command "opt". It will find out   #
+#  those extra files and delete them. It still stores the creator and  #
+#  time stamp to facilitate administrators to view information.        # 
+#-------------COMMENT FOR OPTIMIZATION (EXTENSION PART)----------------#
+
+opt(){
+  for name in $*
+    do
+      fi=`$ECHO $name | $SED -e 's/\/[^\/]*$//'`
+      n=`$ECHO $name | $SED -e 's/.*\///'`
+      if [ "$n" = "$name" ]; then
+        dir=`$FIND .uevcs -name $name -type d 2> /dev/null`
+      else
+	dir=`$FIND $fi/.uevcs -name $n -type d 2> /dev/null`
+      fi
+      if [ ! -z "$dir" ]; then
+	for directory in $dir
+	  do
+	    filename=`$ECHO $directory | $SED -e 's/.*\///'`
+	    log=$directory/log
+	    index=`grep "version:" $log | $WC -l`
+	    index=`expr $index + 1`
+	    if [ "$index" -gt 3 ]; then
+	      grep "^version:" $log>versionchenchao
+	      num=`$WC -l versionchenchao | $AWK '{print $1}'`
+	      while [ "$num" -gt 0 ]
+		do
+		  ver=`grep "^version:" versionchenchao | $SED '1!d'`
+		  $SED '1d' versionchenchao>version1
+		  $MV version1 versionchenchao
+		  $SED -n -e '/^'"$ver"'/,/^$/p' $log | $SED \
+'1d'>$directory/$ver
+		  num=`expr $num - 1`
+		done
+	      $RM -rf versionchenchao
+	      $TOUCH ToDelete
+	      file=`$FIND $directory -name "version*" > /dev/null`
+	      for f1 in $file
+		do
+		  chenchao=`$ECHO $f1 | $SED -e 's/.*\///'`
+		  $MV $f1 $chenchao
+		  f2=`$FIND $directory -name "version*" 2> /dev/null`
+		  if [ ! -z "$f2" ]; then
+		    for f3 in $f2
+		      do
+			value=`$DIFF $chenchao $f3`
+			if [ -z "$value" ]; then
+			  v=`grep "$chenchao" ToDelete`
+			  if [ -z "$v" ]; then
+			    $ECHO "$chenchao">>ToDelete
+			  fi
+			fi
+		      done
+		  fi
+		  $RM -rf $chenchao
+		done
+	      number=`grep "^version:" ToDelete | $WC -l`
+	      number=`expr $number + 1`
+	      while [ "$number" -gt 1 ]
+		do
+		  deleteversion=`grep "^version:" ToDelete \
+| $SED '$!d'`
+		  $SED '$d' ToDelete>ToDelete1
+		  $RM -rf ToDelete
+		  $MV ToDelete1 ToDelete
+		  $SED -e '/^'"$deleteversion"'/,/^$/d' $log>newlog
+		  $RM -rf $log
+		  $MV newlog $log
+		  number=`expr $number - 1`
+		done
+	      $RM -rf ToDelete
+	      if [ ! -z "$vflag" ]; then
+		$PRINTF "for $directory\n"
+		$PRINTF "compare each file---ok!\n"
+		$PRINTF "find out the same one---ok!\n"
+		$PRINTF "delete the same one---ok!\n"
+		$PRINTF "keep the information---ok!\n"
+		$PRINTF "\n"
+	      fi
+	    fi
+	  done
+      fi      
+    done
+}
+
+if [ "$count" -ge 2 ]; then
+  if [ ! -z "$addflag" ] && [ -z "$rflag" ]; then
+     if [ -z "$flag" ]; then
+        add $*
+     fi
+     if [ ! -z "$flag" ]; then
+	shift
+	add $*
+     fi
+  fi
+  if [ ! -z "$addflag" ] && [ ! -z "$rflag" ]; then
+     if [ -z "$flag" ]; then
+	addr $*
+     fi
+     if [ ! -z "$flag" ]; then
+	shift
+	addr $*
+     fi
+  fi
+  if [ ! -z "$updateflag" ] && [ -z "$rflag" ]; then
+     if [ -z "$flag" ]; then
+	update $*
+     fi
+     if [ ! -z "$flag" ]; then
+	shift
+	update $*
+     fi
+  fi	 
+  if [ ! -z "$updateflag" ] && [ ! -z "$rflag" ]; then
+     if [ -z "$flag" ]; then
+        updater $*
+     fi
+     if [ ! -z "$flag" ]; then
+        shift
+        updater $*
+     fi
+  fi
+  if [ ! -z "$getflag" ] && [ -z "$rflag" ]; then
+     if [ -z "$flag" ]; then
+	get $*
+     fi
+     if [ ! -z "$flag" ]; then
+	shift
+	get $*
+     fi
+  fi     
+  if [ ! -z "$getflag" ] && [ ! -z "$rflag" ]; then
+     if [ -z "$flag" ]; then
+	getr $*
+     fi
+     if [ ! -z "$flag" ]; then
+	shift
+	getr $*
+     fi
+  fi 
+  if [ ! -z "$deleteflag" ] && [ -z "$rflag" ]; then
+     if [ -z "$flag" ]; then
+        delete $*
+     fi
+     if [ ! -z "$flag" ]; then
+        shift
+        delete $*
+     fi
+  fi
+  if [ ! -z "$deleteflag" ] && [ ! -z "$rflag" ]; then
+     if [ -z "$flag" ]; then
+        deleter $*
+     fi
+     if [ ! -z "$flag" ]; then
+        shift
+        deleter $*
+     fi
+  fi
+  if [ ! -z "$moveflag" ] && [ -z "$rflag" ]; then
+     if [ -z "$flag" ]; then
+        move $*
+     fi
+     if [ ! -z "$flag" ]; then
+        shift
+        move $*
+     fi
+  fi
+  if [ ! -z "$moveflag" ] && [ ! -z "$rflag" ]; then
+     $PRINTF "Command \"move\" doesn't support the flag -r.\n"
+  fi
+  if [ ! -z "$showflag" ] && [ -z "$rflag" ]; then
+     if [ -z "$flag" ]; then
+        show $*
+     fi
+     if [ ! -z "$flag" ]; then
+        shift
+        show $*
+     fi
+  fi
+  if [ ! -z "$showflag" ] && [ ! -z "$rflag" ]; then
+     $PRINTF "Command \"show\" doesn't support the flag -r.\n"
+  fi
+  if [ ! -z "$optflag" ] && [ -z "$rflag" ]; then
+     if [ -z "$flag" ]; then
+        opt $*
+     fi
+     if [ ! -z "$flag" ]; then
+        shift
+        opt $*
+     fi
+  fi
+  if [ ! -z "$optflag" ] && [ ! -z "$rflag" ]; then
+     $PRINTF "Command \"opt\" doesn't support the flag -r.\n"
+  fi 
+fi
+  if [ ! -z "$helpflag" ] && [ "$count" -ge 1 ]; then
+     help
+  fi
+else
+  $PRINTF "Usage: %s:[ command ] [ -r ] [ -v ] [ file(s) ] args\n"
+fi
+
